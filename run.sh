@@ -29,7 +29,7 @@ while [ "$#" -ne 0 ]; do
 done
 
 if [ ! -e docker.env ]; then
-    echo "docker.env does not exists. Regerenate it."
+    echo "docker.env does not exists. Regenerate it."
     if [ -z "$API_KEY" ] || [ -z "$SITE" ]; then
         usage
     fi
@@ -42,5 +42,14 @@ DD_SITE=$SITE
 EOF
 fi
 
-docker-compose build
-docker-compose up
+COMPOSE=
+if docker-compose version >/dev/null 2>&1; then
+    COMPOSE=docker-compose
+elif podman-compose version >/dev/null 2>&1; then
+    COMPOSE=podman-compose
+else
+    echo "Please install docker-compose or podman-compose"
+fi
+
+$COMPOSE build
+$COMPOSE up
