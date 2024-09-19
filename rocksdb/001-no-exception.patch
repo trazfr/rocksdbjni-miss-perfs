@@ -1,0 +1,26 @@
+--- a/java/rocksjni/rocksjni.cc
++++ b/java/rocksjni/rocksjni.cc
+@@ -1453,15 +1453,17 @@ jbyteArray Java_org_rocksdb_RocksDB_get__J_3BII(JNIEnv* env, jclass,
+   try {
+     ROCKSDB_NAMESPACE::JByteArraySlice key(env, jkey, jkey_off, jkey_len);
+     ROCKSDB_NAMESPACE::JByteArrayPinnableSlice value(env);
+-    ROCKSDB_NAMESPACE::KVException::ThrowOnError(
+-        env,
++    const auto status =
+         db->Get(ROCKSDB_NAMESPACE::ReadOptions(), db->DefaultColumnFamily(),
+-                key.slice(), &value.pinnable_slice()));
+-    return value.NewByteArray();
+-
++                key.slice(), &value.pinnable_slice());
++    if (status.ok()) {
++      return value.NewByteArray();
++    } else if (!status.IsNotFound()) {
++      ROCKSDB_NAMESPACE::RocksDBExceptionJni::ThrowNew(env, status);
++    }
+   } catch (ROCKSDB_NAMESPACE::KVException&) {
+-    return nullptr;
+   }
++  return nullptr;
+ }
+
+ /*
