@@ -43,12 +43,14 @@ EOF
 fi
 
 COMPOSE=
-if docker-compose version >/dev/null 2>&1; then
+if docker compose version >/dev/null 2>&1; then
+    COMPOSE="docker compose"
+elif docker-compose version >/dev/null 2>&1; then
     COMPOSE=docker-compose
 elif podman-compose version >/dev/null 2>&1; then
     COMPOSE=podman-compose
 else
-    echo "Please install docker-compose or podman-compose"
+    echo "Please install the docker compose plugin, docker-compose or podman-compose"
 fi
 
 $COMPOSE build

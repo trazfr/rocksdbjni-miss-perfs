@@ -27,3 +27,18 @@ DD_SITE=datadoghq.com
 
 and use it to pass the Datadog credentials to `docker-compose`.
 This will generate profiles and upload them to Datadog.
+
+## Hits and misses keys
+
+To try to compare hit and misses, the keys are interleaved, the hits are done with 1M even keys with the format [%08d](https://github.com/trazfr/rocksdbjni-miss-perfs/blob/main/src/main/java/test/App.java#L14):
+
+- 00000000
+- 00000002
+- 00000004...
+- 01999998
+
+The misses are odd keys:
+
+- 00000001
+- 00000003...
+- 01999999
