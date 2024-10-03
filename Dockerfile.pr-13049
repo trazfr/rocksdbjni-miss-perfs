@@ -1,0 +1,57 @@
+# build the rocksdb deps
+FROM ubuntu:24.04 AS build-rocksdb
+
+RUN mkdir /home/java && \
+    apt-get update && \
+    apt-get install -y \
+        build-essential \
+        libgflags-dev \
+        libsnappy-dev \
+        zlib1g-dev \
+        libbz2-dev \
+        liblz4-dev \
+        libzstd-dev \
+        git \
+        cmake \
+        curl \
+        default-jdk-headless \
+        maven
+WORKDIR /home/java
+RUN git clone --no-checkout https://github.com/evolvedbinary/rocksdb.git
+RUN cd rocksdb && \
+    git checkout eb/expensive-jni-misses-13023-jmh-fix
+RUN --mount=type=cache,target=/root/.m2 \
+    cd rocksdb && \
+    JAVA_HOME=/usr/lib/jvm/default-java make -j $(nproc) rocksdbjavastatic
+RUN ln -s /home/java/rocksdb/java/target/rocksdbjni-*.jar /home/java/rocksdbjni.jar
+
+# build the java archive + fetch the deps
+FROM ubuntu:24.04 AS build-java
+
+RUN apt-get update && \
+    apt-get install -y \
+        curl \
+        default-jdk-headless \
+        maven
+COPY src /home/java/src
+COPY pom.xml /home/java/
+WORKDIR /home/java
+RUN curl -fL -o dd-java-agent.jar 'https://dtdg.co/latest-java-tracer'
+RUN --mount=type=cache,target=/root/.m2 \
+    mvn clean install && \
+    ln -s target/test_rocksdb*.jar test_rocksdb.jar
+
+# final image
+FROM ubuntu:24.04
+
+RUN apt-get update && \
+    apt-get install -y default-jre-headless && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+WORKDIR /home/java
+COPY --from=build-java /home/java/*.jar /home/java/
+COPY --from=build-rocksdb /home/java/*.jar /home/java/
+CMD java \
+    -javaagent:dd-java-agent.jar \
+    -classpath "rocksdbjni.jar:test_rocksdb.jar" \
+    test.App
